@@ -68,6 +68,7 @@ function compileInstallpostfix(){
     tar zxvf postfix-3.0.1.tar.gz
     cd postfix-3.0.1
     make makefiles 'CCARGS=-DHAS_MYSQL -I/usr/include/mysql -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl -DUSE_TLS ' 'AUXLIBS=-L/usr/lib64/mysql -lmysqlclient -lz -lrt -lm -L/usr/lib64/sasl2 -lsasl2   -lssl -lcrypto'
+   	make
    	./expect.sh
     handleError;
     chown -R postfix:postdrop /var/spool/postfix
