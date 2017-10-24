@@ -68,8 +68,8 @@ function compileInstallpostfix(){
     tar zxvf postfix-3.0.1.tar.gz
     cd postfix-3.0.1
     make makefiles 'CCARGS=-DHAS_MYSQL -I/usr/include/mysql -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl -DUSE_TLS ' 'AUXLIBS=-L/usr/lib64/mysql -lmysqlclient -lz -lrt -lm -L/usr/lib64/sasl2 -lsasl2   -lssl -lcrypto'
-    make && make install
-
+   	./expect.sh
+    handleError;
     chown -R postfix:postdrop /var/spool/postfix
     chown -R postfix:postdrop /var/lib/postfix/
     chown root /var/spool/postfix
@@ -84,7 +84,7 @@ function compileInstallpostfix(){
     postconf -e 'mynetworks=42.123.92.0/24, 10.0.0.0/24, 127.0.0.0/8'
     postconf -e 'relay_domains=$mydestination'
     postconf -e 'alias_maps=hash:/etc/aliases'
-
+    handleError;
     echo 'compile and install postfix done <<<<<<<<<<<<<<<<<<<<<<<<<'
 
 }
@@ -274,28 +274,28 @@ function configNgix() {
 
 
 #1、安装环境准备
-preparement;
+# preparement;
 
 # 2、编译安装postfix
 compileInstallpostfix;
 
 #3、安装dovecot
-installDovecot;
+# installDovecot;
 
-#4、安装Courier-authlib
-installCourier;
+# #4、安装Courier-authlib
+# installCourier;
 
-#5、smtp以及虚拟用户相关的设置
-confSmtp;
+# #5、smtp以及虚拟用户相关的设置
+# confSmtp;
 
-#6、安装Extmail
-installExtmail;
+# #6、安装Extmail
+# installExtmail;
 
-#7、安装ExtMan
-installExtMan;
+# #7、安装ExtMan
+# installExtMan;
 
-#8、本机测试
-testlocalMail;
+# #8、本机测试
+# testlocalMail;
 
-#9、配置启动ngix
-configNgix;
+# #9、配置启动ngix
+# configNgix;
