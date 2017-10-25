@@ -46,7 +46,7 @@ function preparement(){
     echo 'add MYSQL Repo, Epel Repo done <<<<<<<<<<<<<<<<<<<<<<<<'
 
     echo 'install relative packages>>>>>>>>>>>>>>>>>>>>>>>>>>'
-    yum install expect mailx nginx vim gcc gcc-c++ openssl openssl-devel db4-devel ntpdate mysql mysql-devel mysql-server bzip2 php-mysql cyrus-sasl-md5 perl-GD perl-DBD-MySQL perl-GD perl-CPAN perl-CGI perl-CGI-Session perl-rrdtool cyrus-sasl-lib cyrus-sasl-plain cyrus-sasl cyrus-sasl-devel libtool-ltdl-devel telnet mail libicu-devel  -y
+    yum install expect httpd mailx nginx vim gcc gcc-c++ openssl openssl-devel db4-devel ntpdate mysql mysql-devel mysql-server bzip2 php-mysql cyrus-sasl-md5 perl-GD perl-DBD-MySQL perl-GD perl-CPAN perl-CGI perl-CGI-Session perl-rrdtool cyrus-sasl-lib cyrus-sasl-plain cyrus-sasl cyrus-sasl-devel libtool-ltdl-devel telnet mail libicu-devel  -y
     handleError;
     echo 'install relative packages done <<<<<<<<<<<<<<<<<<<<<<<<'
 }
@@ -69,7 +69,46 @@ function compileInstallpostfix(){
     cd postfix-3.0.1
     make makefiles 'CCARGS=-DHAS_MYSQL -I/usr/include/mysql -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl -DUSE_TLS ' 'AUXLIBS=-L/usr/lib64/mysql -lmysqlclient -lz -lrt -lm -L/usr/lib64/sasl2 -lsasl2   -lssl -lcrypto'
    	make
-   	./expect.sh
+   	/usr/bin/expect <<-EOF
+   	spawn make install
+   	expect "install_root:"
+	send "\r"
+	expect "tempdir:"
+	send "/tmp/extmail\r"
+	expect "config_directory:"
+	send "\r"
+	expect "command_directory:"
+	send "\r"
+	expect "daemon_directory:"
+	send "\r"
+	expect "data_directory:"
+	send "\r"
+	expect "html_directory:"
+	send "\r"
+	expect "mail_owner:"
+	send "\r"
+	expect "mailq_path:"
+	send "\r"
+	expect "manpage_directory:"
+	send "\r"
+	expect "newaliases_path:"
+	send "\r"
+	expect "queue_directory:"
+	send "\r"
+	expect "readme_directory:"
+	send "\r"
+	expect "sendmail_path:"
+	send "\r"
+	expect "setgid_group:"
+	send "\r"
+	expect "shlib_directory:"
+	send "\r"
+	expect "meta_directory:"
+	send "\r"
+	interact
+	expect eof
+	EOF
+   	# bash /root/expect.sh
     handleError;
     chown -R postfix:postdrop /var/spool/postfix
     chown -R postfix:postdrop /var/lib/postfix/
@@ -149,7 +188,7 @@ function installCourier() {
     chkconfig --add courier-authlib
     chkconfig courier-authlib on
     echo "/usr/local/courier-authlib/lib/courier-authlib" >> /etc/ld.so.conf.d/courier-authlib.conf
-    ldconfig -v 
+    ldconfig -pv 
     service courier-authlib start
 
     echo 'install courier-authlib done <<<<<<<<<<<<<<<<<<<<<<<<'
@@ -175,6 +214,16 @@ function confSmtp() {
     postconf -e "virtual_uid_maps=static:2525"
     postconf -e "virtual_gid_maps=static:2525"
     postconf -e "virtual_transport=virtual"
+    # postconf -e "maildrop_destination_recipient_limit=1"
+    # postconf -e "maildrop_destination_concurrency_limit=1"
+    # postconf -e "message_size_limit=14336000"
+    # postconf -e "virtual_mailbox_limit=20971520"
+    # postconf -e "virtual_create_maildirsize=yes"
+    # postconf -e "virtual_mailbox_extended=yes"
+    # postconf -e "virtual_mailbox_limit_maps=20971520"
+    # postconf -e "virtual_mailbox_limit_override=yes"
+    # postconf -e "virtual_maildir_limit_message=Sorry, the user's maildir has overdrawn his diskspace quota, please Tidy your mailbox and try again later."
+    # postconf -e "virtual_mailbox_limit=yes"
 
     echo 'config smtp postfix done <<<<<<<<<<<<<<<<<<<<<<<<'
 }
@@ -233,10 +282,20 @@ function installExtMan() {
     chown -R postfix.postfix /tmp/extman/
 
     postfix start
+    systemctl enable dovecot saslauthd
     systemctl start dovecot saslauthd
     ss -tnluo | grep :25
     ps aux | grep dovecot
     ps aux | grep saslauthd
+
+    #解决Undefined subroutine &Ext::Utils::sort2name 
+    #called at /var/www/extsuite/extmail/libs/Ext/App/Folders.pm line 387问题
+    cd /var/www/extsuite/extmail/libs/Ext
+	cp Utils.pm /var/www/extsuite/extman/libs/
+	cd /var/www/extsuite/extman/libs/Ext
+	mv Utils.pm ManUtils.pm
+	/var/www/extsuite/extmail/dispatch-init stop
+	/var/www/extsuite/extmail/dispatch-init start
 
     echo 'install extman <<<<<<<<<<<<<<<<<<<<<<<<<<<'
 }
@@ -254,7 +313,7 @@ function testlocalMail() {
 
 
 function configNgix() {
-    cd /root/software
+   cd /root/software
    echo 'Ngix visit'
    \cp -rf /root/conf/extmail/dispatch-init /var/www/extsuite/extmail/dispatch-init
    /var/www/extsuite/extmail/dispatch-init start
@@ -275,28 +334,28 @@ function configNgix() {
 
 
 #1、安装环境准备
-# preparement;
+preparement;
 
 # 2、编译安装postfix
 compileInstallpostfix;
 
 #3、安装dovecot
-# installDovecot;
+installDovecot;
 
-# #4、安装Courier-authlib
-# installCourier;
+#4、安装Courier-authlib
+installCourier;
 
-# #5、smtp以及虚拟用户相关的设置
-# confSmtp;
+#5、smtp以及虚拟用户相关的设置
+confSmtp;
 
-# #6、安装Extmail
-# installExtmail;
+#6、安装Extmail
+installExtmail;
 
-# #7、安装ExtMan
-# installExtMan;
+#7、安装ExtMan
+installExtMan;
 
-# #8、本机测试
-# testlocalMail;
+#8、本机测试
+testlocalMail;
 
-# #9、配置启动ngix
-# configNgix;
+#9、配置启动ngix
+configNgix;
